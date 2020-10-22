@@ -4,11 +4,8 @@ import (
 	"flag"
 	"strings"
 	"fmt"
-	"github.com/remeh/sizedwaitgroup"
 	"time"
-    "strconv"
 	memcached "github.com/mattrobenolt/go-memcached"
-	memcache "github.com/bradfitz/gomemcache/memcache"
 	"log"
 	"runtime"
 	"net"
@@ -50,7 +47,7 @@ func main() {
 	cache = NewCache(cacheloc)
 	
 	cache.Peers(peers)
-	
+	//Sync all peers when memcache set is made
 	go cache.PeerDistribute()
 	//restore from disk on startup, this is non blocking
 	cache.Reload()
@@ -146,43 +143,28 @@ func keySync (data string, conn net.Conn){
       
       log.Printf("Keys to sync: %d\n",len(diff))
       
-      
       parts := strings.Split(conn.RemoteAddr().String(),":")
 
-      mcp := strconv.Itoa(port)
-   
-      log.Printf("Disk Sync to memcache @ %s",parts[0]+":"+mcp)
+      log.Printf("Disk Sync to memcache @ %s",parts[0])
     
       go func(){
     
-      mc := memcache.New(parts[0]+":"+mcp)
-      
-      swg := sizedwaitgroup.New(25)
          
       for _,key := range diff{
-           
-            swg.Add() 
             
-            go func(key string){
-            
-            defer swg.Done()
-            
+      
             if tmp, ok := cache.Index.Get(key); ok {
 	               	         
 		         item := tmp.(*memcached.Item)
-		         exp := int32(item.Expires.Sub(time.Now()).Seconds())
-		         //log.Printf("Disk Sync to memcache %s @ %s","memsysync_"+item.Key,parts[0]+":"+mcp)
-		         if(!item.IsExpired()){
-                 mc.Set(&memcache.Item{Key: "memsysync_"+item.Key, Value: item.Value,Expiration: exp})
-                 }
+		         cache.SyncItem(item)
+            }else{
+                
+                log.Println("Key unable to sync",key)
             }   
             
-            }(key)
-            
-     
-      
+
       }
-      swg.Wait()
+
       
       }()
       

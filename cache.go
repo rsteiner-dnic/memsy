@@ -12,6 +12,7 @@ import(
     "github.com/DncDev/memsy/dkv"
     cmap "github.com/orcaman/concurrent-map"
     memcached "github.com/mattrobenolt/go-memcached"
+    "github.com/paulbellamy/ratecounter"
 )
 
 type Cache struct{
@@ -19,7 +20,9 @@ type Cache struct{
   Storage  *dkv.KVStore
   Index cmap.ConcurrentMap
   items chan *memcached.Item
+  peeritems map[string]chan *memcached.Item
   peers []string
+  counter *ratecounter.RateCounter
 }
 
 func (c *Cache) Get(key string) memcached.MemcachedResponse {
@@ -48,11 +51,19 @@ func (c *Cache) Peers(p []string){
     
     c.peers = p
     
+    c.peeritems = make(map[string]chan  *memcached.Item)
+    
+    for _,pp := range c.peers {
+        
+          c.peeritems[pp] = make(chan *memcached.Item)
+        
+    }
+    
 }
 
 func (c *Cache) Set(item *memcached.Item) memcached.MemcachedResponse {
-    
-    //log.Printf("Receiving %#v",item)
+
+    c.counter.Incr(1)
     
     dosync := true
     
@@ -64,43 +75,107 @@ func (c *Cache) Set(item *memcached.Item) memcached.MemcachedResponse {
     c.Index.Set(item.Key,item)
     
     go c.DurableSave(item)
-
     
     if(dosync==true){
-        cache.items <- item
+        c.items <- item
     }
 	
 	return nil 
 }
 
+func (c *Cache) SyncItem(item *memcached.Item){
+    
+    c.counter.Incr(1)
+    
+    c.items <- item
+    
+}
+
+//syncs to all peers
+
 func (c *Cache) PeerDistribute(){ 
     
-    
     var items []*memcached.Item
-
     
-    for it := range c.items {
+    for {
+     
+       override:=false
+
+       select {
+       
+       case it := <-c.items:
+    
+           items = append(items,it)
+           
+       case <-time.After(5 * time.Second):
+           
+           override=true
+       //allow flusing the current list 
         
-        items = append(items,it)
+       }
+       
+       if(len(items)>0){
         
+       //log.Println("Items in distribution queue:",len(items))
+        
+       } 
         //batch N items to send
-        if(len(items)==10){
             
-            go func(items []*memcached.Item){
+        crate := c.counter.Rate()
+                
+        rate := 1
+      
+        if(crate>750){
+        
+            rate = 1000
+            
+        }else if(crate>500){
+            
+            rate = 500
+            
+        }else if(crate>100){
+            
+            rate = 100
+            
+        }else if(crate>50){
+            
+            rate = 50
+            
+        }else if(crate>10){
+            
+            rate = 10
+            
+        }
+        
+        if(len(items)>0){
+        
+        //log.Println("Rate:",rate)
+        
+        }
+        
+        if(len(items)==rate || override==true){
+            
+            go func(ite []*memcached.Item){
                 
              for _,p := range c.peers {
                 
-                
-                pport := strconv.Itoa(port)
-                
-                log.Printf("Sending to peer: %s ct: %d\n",p+":"+pport,len(items))
-                
-                mc := memcache.New(p+":"+pport)
-                
-                for _,item := range items {
+                if(len(ite)>0){
                     
-                exp := int32(item.Expires.Sub(time.Now()).Seconds())
-                mc.Set(&memcache.Item{Key: "memsysync_"+item.Key, Value: item.Value,Expiration: exp})   
+                    pport := strconv.Itoa(port)    
+                        
+                    log.Printf("Sending to peer: %s ct: %d\n",p+":"+pport,len(ite))    
+                    
+                    mc := memcache.New(p+":"+pport)
+                    
+                    for _,item := range ite {
+                        
+                        exp := int32(item.Expires.Sub(time.Now()).Seconds())
+                        
+                    
+                        mc.Set(&memcache.Item{Key: "memsysync_"+item.Key, Value: item.Value,Expiration: exp})  
+                  
+                    
+                    }
                 
                 }
         
@@ -189,10 +264,12 @@ func NewCache(cacheloc string) *Cache {
     cache := &Cache{}
     
     cache.Storage,err = dkv.Open(cacheloc+"/memsy.db")
-    
+
     cache.Index = cmap.New()
     
     cache.items = make(chan *memcached.Item)
+    
+    cache.counter = ratecounter.NewRateCounter(1 * time.Second)
         
     if(err!=nil){
       log.Fatal(err)

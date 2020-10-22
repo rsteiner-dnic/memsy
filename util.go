@@ -27,3 +27,20 @@ func difference(a []string, b []string) []string {
 }
 
 
+func inStringSlice(a string, b []string) (bool){
+    
+    for _,v := range b {
+        
+        if(v==a){
+            
+            return true
+            
+        }
+        
+        
+    }
+    
+    return false
+    
+}
+

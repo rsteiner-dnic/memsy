@@ -16,7 +16,7 @@ var keys []string
 func main(){
     
     
-    flag.StringVar(&target, "target","127.0.0.1:11211", "TCP port number to listen on (default: 11211)")
+    flag.StringVar(&target, "target","127.0.0.1:11211", "TCP port number to listen on")
 
     flag.Parse()
     
