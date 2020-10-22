@@ -13,7 +13,7 @@ Memsy also allows you to create a cluster of peers that will keep in sync with e
 
 Memsy is configured on the command line
 
-
+```
   -cachedir string
         Location directory for memsy disk db (default "/var/cache")
   -comport string
@@ -28,6 +28,8 @@ Memsy is configured on the command line
         How often to sync all records to other nodes (default "30m")
   -threads int
         number of threads to use (default: # of cpus on server)
+   
+```
         
 Note: the comport and port #'s must be the same on all peers for syncing to work
 
