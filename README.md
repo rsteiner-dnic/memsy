@@ -25,7 +25,7 @@ Memsy is configured on the command line
   -port int
         TCP port number to listen on (default: 11211)
   -syncinterval string
-        How often to sync all records to other nodes (default "30m")
+        How often to sync all records to other nodes (default "30m") Note: All records are synced as they come in, this covers old records, etc
   -threads int
         number of threads to use (default: # of cpus on server)
    
