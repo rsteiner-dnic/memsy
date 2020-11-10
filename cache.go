@@ -5,13 +5,14 @@ import(
     "log"
     "strings"
     "time"
+    "context"
     "strconv"
     "encoding/gob"
     "bytes"
     memcache "github.com/bradfitz/gomemcache/memcache"
     "github.com/DncDev/memsy/dkv"
     cmap "github.com/orcaman/concurrent-map"
-    memcached "github.com/mattrobenolt/go-memcached"
+    memcached "github.com/ralfonso-directnic/go-memcached"
     "github.com/paulbellamy/ratecounter"
 )
 
@@ -23,9 +24,15 @@ type Cache struct{
   peeritems map[string]chan *memcached.Item
   peers []string
   counter *ratecounter.RateCounter
+  StatsObj memcached.Stats
 }
 
-func (c *Cache) Get(key string) memcached.MemcachedResponse {
+func (c *Cache) Stats(s memcached.Stats){
+    
+    c.StatsObj = s
+}
+
+func (c *Cache) GetWithContext(ctx *context.Context,key string) memcached.MemcachedResponse {
     
     
     //for some reason the key is passed with a preceding space, it's probably a bug in the lib
@@ -61,9 +68,11 @@ func (c *Cache) Peers(p []string){
     
 }
 
-func (c *Cache) Set(item *memcached.Item) memcached.MemcachedResponse {
+func (c *Cache) SetWithContext(ctx *context.Context,item *memcached.Item) memcached.MemcachedResponse {
 
     c.counter.Incr(1)
+    
+    c.StatsObj["total_items"].(*memcached.CounterStat).Increment(1)
     
     dosync := true
     
@@ -204,7 +213,7 @@ func (c *Cache) DurableSave(item *memcached.Item){
     
 }
 
-func (c *Cache) Delete(key string) memcached.MemcachedResponse {
+func (c *Cache) DeleteWithContext(ctx *context.Context,key string) memcached.MemcachedResponse {
 	c.Index.Remove(key)
 	//Remove from disk storage
 	go c.Storage.Delete(key)
@@ -226,6 +235,7 @@ func (c *Cache) Restore(key string,value []byte){
     if(!item.IsExpired()){
    // log.Println("Restoring key...",key)
     c.Index.Set(key,item)
+       
     }
     
 }
@@ -243,6 +253,9 @@ func (c *Cache) CleanExpired(key string,value []byte){
     log.Println("Expired key....",key)  
     go c.Storage.Delete(key)
     c.Index.Remove(key)
+     if(c.StatsObj!=nil){
+      c.StatsObj["expired_unfetched"].(*memcached.CounterStat).Increment(1)
+     }
     }
     
 }
@@ -254,6 +267,7 @@ func (c *Cache) Reload(){
        c.Storage.Objects(c.Restore) 
        log.Println("Completed restore from disk")
        c.Loaded = true
+    
    
 }
 

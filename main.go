@@ -5,10 +5,11 @@ import (
 	"strings"
 	"fmt"
 	"time"
-	memcached "github.com/mattrobenolt/go-memcached"
+	memcached "github.com/ralfonso-directnic/go-memcached"
 	"log"
 	"runtime"
 	"net"
+	"os"
     "github.com/DncDev/memsy/tcpcomm"
 
 )
@@ -16,6 +17,7 @@ import (
 
 var listen string
 var port int
+var debug bool
 var threads int 
 var peers_raw string
 var peers []string
@@ -28,6 +30,8 @@ var syncinterval string
 
 func main() {
     
+
+    
     flag.StringVar(&cacheloc,"cachedir","/var/cache","Location directory for memsy db")
     flag.StringVar(&syncinterval,"syncinterval","30m","How often to sync all records to other nodes")
     flag.StringVar(&peers_raw,"peers","", "Comma separated list of servers to peer with")
@@ -35,7 +39,14 @@ func main() {
     flag.IntVar(&port, "port",11211, "TCP port number to listen on")
     flag.StringVar(&comport, "comport","1180", "TCP port number for communication")
     flag.IntVar(&threads,"threads", runtime.NumCPU(),"Number of threads to use")
+    flag.BoolVar(&debug,"debug",false,"Debug settings")
 	flag.Parse()
+	
+	if(debug==true){
+    	
+    	    log.SetFlags(log.LstdFlags | log.Lshortfile)
+    	
+	}
 	
 	peers = strings.Split(peers_raw,",")
 	
@@ -55,6 +66,16 @@ func main() {
 	defer cache.Storage.Close()
 	
 	server := memcached.NewServer(address, cache)
+	
+    if(cache.StatsObj!=nil){
+         
+         cache.StatsObj["curr_items"].(*memcached.CounterStat).SetCount(len(cache.Index.Keys()))
+         cache.StatsObj["total_items"].(*memcached.CounterStat).SetCount(len(cache.Index.Keys()))
+  
+    }else{
+        
+        log.Println("Cache Stats Not Initialized yet...")
+    }
 	
 	tcpcomm.Register("KeySync",keySync);
 	
@@ -77,9 +98,28 @@ func checkKeyCount(){
     	
     	for range ticker2.C {
     	
-    	log.Printf("Keys Stored: %d",len(cache.Index.Keys()))
-    	
+        	log.Printf("Keys Stored: %d",len(cache.Index.Keys()))
+        	
+            cache.StatsObj["curr_items"].(*memcached.CounterStat).SetCount(len(cache.Index.Keys()))
+        	
+        	
+        	info, err := os.Stat(cacheloc+"/memsy.db")
+        	
+            if err != nil {
+            	continue
+            }
+            x := int(info.Size())
+    	    	
+    	    cache.StatsObj["bytes"].(*memcached.CounterStat).SetCount(x)
+	
     	}
+    	
+    	
+    	
+    	
+    	
+    
+    	
     
 }
 
