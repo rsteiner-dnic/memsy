@@ -18,6 +18,8 @@ Memsy is configured on the command line
         Location directory for memsy disk db (default "/var/cache")
   -comport string
         TCP port number for communication (default "1180")
+  -debug
+        Debug settings
   -listen string
         Interface to listen on. Default to all addresses. (default "0.0.0.0")
   -peers string
