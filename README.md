@@ -47,5 +47,8 @@ cd to directory and then run "go build"
 
 ## FAQ
 
-Q: How does syncing work
-A: When a set request comes in it's batched in groups of 10 and copied to all peers configured (this reduces connection overhead to peers), every syncinterval all keys are sent to peer nodes and diff'd, what doesn't match is sent to the peer. This is also done on startup.
+- Q: How does syncing work
+- A: When a set request comes in it's batched in groups (using a rate limit algorithm) and copied to all peers configured (this reduces connection overhead to peers), every syncinterval all keys are sent to peer nodes and diff'd, what doesn't match is sent to the peer. This is also done on startup.
+
+- Q: What is the protocol for syncing
+- A: The key diffing protocl using tcp, once the list of keys is determined the keys/values are sent using memcache protocl itself
