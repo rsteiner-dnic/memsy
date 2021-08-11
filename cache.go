@@ -116,7 +116,7 @@ func (c *Cache) PeerDistribute(){
     
            items = append(items,it)
            
-       case <-time.After(5 * time.Second):
+       case <-time.After(2 * time.Second):
            
            override=true
        //allow flusing the current list 
