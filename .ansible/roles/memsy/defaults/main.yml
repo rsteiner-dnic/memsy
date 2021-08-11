@@ -1,0 +1,3 @@
+memsy_port: "11212"
+memsy_cache_dir: "/var/cache"
+memsy_peers: ""

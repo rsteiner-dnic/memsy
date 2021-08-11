@@ -1,0 +1,16 @@
+[Unit]
+Description=Memsy Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/memsy --peers={{ memsy_peers }} --port={{ memsy_port }} --cachedir={{ memsy_cache_dir }}
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+StartLimitBurst=3
+PIDFile=/var/run/memsy/memsy.pid
+
+[Install]
+WantedBy=multi-user.target

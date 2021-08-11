@@ -1,0 +1,47 @@
+---
+
+  - name: Stop Service
+    service:
+      name: memsy
+      state: stopped
+    ignore_errors: yes
+  
+  - name: Add user to server
+    user:
+        name: "memsy"
+        state: present
+        system: True
+        groups: screen
+        append: yes
+
+
+  - name: Ensure group "memsy"  exists
+    group:
+      name: "memsy"
+      state: present
+      system: True
+  
+  - name: Copy binary
+    copy:
+      src: "{{ playbook_dir }}/repos/memsy/bin/memsy"
+      dest: "/usr/local/bin/"
+      mode: "0755"
+      force: True
+      owner: "memsy"
+ 
+  - name: Create systemd unit file
+    template:
+      src:  "memsy.service.j2"
+      dest: "/etc/systemd/system/memsy.service"
+    when: ansible_service_mgr == "systemd"
+
+  - name: Enable Service
+    service:
+      daemon_reload: yes
+      name: memsy
+      enabled: yes
+
+  - name: Start Service
+    service:
+      name: memsy
+      state: restarted

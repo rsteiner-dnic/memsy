@@ -1,0 +1,7 @@
+
+---
+- hosts: all
+  serial: "20%"
+  remote_user: root
+  roles:
+    - { role: parking }
