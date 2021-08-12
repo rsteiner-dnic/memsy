@@ -15,21 +15,23 @@ Memsy is configured on the command line
 
 ```
   -cachedir string
-        Location directory for memsy disk db (default "/var/cache")
+    	Location directory for memsy db (default "/var/cache")
   -comport string
-        TCP port number for communication (default "1180")
+    	TCP port number for communication (default "1180")
   -debug
-        Debug settings
+    	Debug settings
+  -expireinterval string
+    	How often to clear expired items (default "17m") //should not be divisble by syncinterval, otherwise you are potentially syncing records at the same time as your are expiring them.
   -listen string
-        Interface to listen on. Default to all addresses. (default "0.0.0.0")
+    	Interface to listen on. Default to all addresses. (default "0.0.0.0")
   -peers string
-        Comma separated list of servers to peer with
+    	Comma separated list of servers to peer with
   -port int
-        TCP port number to listen on (default: 11211)
+    	TCP port number to listen on (default 11211)
   -syncinterval string
-        How often to sync all records to other nodes (default "30m") Note: All records are synced as they come in, this covers old records, etc
+    	How often to sync all records to other nodes (default "30m") Note: All records are synced as they come in, this covers old records, etc
   -threads int
-        number of threads to use (default: # of cpus on server)
+    	Number of threads to use (default 2)
    
 ```
         
@@ -50,7 +52,7 @@ cd to directory and then run "go build"
 ## FAQ
 
 - Q: How does syncing work
-- A: When a set request comes in it's batched in groups (using a rate limit algorithm) and copied to all peers configured (this reduces connection overhead to peers), every syncinterval all keys are sent to peer nodes and diff'd, what doesn't match is sent to the peer. This is also done on startup.
+- A: When a set request comes in it's batched in groups (using a rate limit algorithm) and copied to all peers configured (this reduces connection overhead to peers), every syncinterval all keys are sent to peer nodes and diff'd, what doesn't match is sent to the peer. This is also done on startup and periodically.
 
 - Q: What is the protocol for syncing
-- A: The key diffing protocl using tcp, once the list of keys is determined the keys/values are sent using memcache protocl itself
+- A: The key diffing protocl using tcp, once the list of keys is determined the keys/values are sent using memcache protocol itself
