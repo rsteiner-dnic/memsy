@@ -25,6 +25,7 @@ var comport string
 var cache *Cache
 var cacheloc string
 var syncinterval string
+var expireinterval string
 
 
 
@@ -34,6 +35,7 @@ func main() {
     
     flag.StringVar(&cacheloc,"cachedir","/var/cache","Location directory for memsy db")
     flag.StringVar(&syncinterval,"syncinterval","30m","How often to sync all records to other nodes")
+    flag.StringVar(&expireinterval,"expireinterval","17m","How often to clear expired items") //we don't really want to expire stuff at teh same time as syncing
     flag.StringVar(&peers_raw,"peers","", "Comma separated list of servers to peer with")
     flag.StringVar(&listen,"listen","0.0.0.0", "Interface to listen on. Default to all addresses.")
     flag.IntVar(&port, "port",11211, "TCP port number to listen on")
@@ -112,15 +114,7 @@ func checkKeyCount(){
     	    	
     	    cache.StatsObj["bytes"].(*memcached.CounterStat).SetCount(x)
 	
-    	}
-    	
-    	
-    	
-    	
-    	
-    
-    	
-    
+    	}    
 }
 
 func syncPeers(){

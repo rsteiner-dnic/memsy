@@ -341,11 +341,11 @@ func NewCache(cacheloc string) *Cache {
     go func (){
 
       	
-       dur,perr := time.ParseDuration(syncinterval)	
+       dur,perr := time.ParseDuration(expireinterval)	
     	
        if(perr!=nil){
            
-            dur,_ = time.ParseDuration("30m")	
+            dur,_ = time.ParseDuration("17m")	
            
        }	
     	
