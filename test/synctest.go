@@ -43,6 +43,11 @@ func main(){
   
   mcs = memcache.New(synchost)
   
+  mcs.MaxIdleConns = 50
+   
+  mct.MaxIdleConns = 50
+
+  
   go watchPairs()
   
   swg := sizedwaitgroup.New(25)
@@ -58,7 +63,7 @@ func main(){
     //log.Printf("Setting Key: %s%d\n",label,i)  
     
     pr := Pair{Key: fmt.Sprintf("%s%d",label,i), Interval: "",Timestamp: time.Now()}  
-    err := mct.Set(&memcache.Item{Key: pr.Key, Expiration: 60, Value: []byte("test set")})    
+    err := mct.Set(&memcache.Item{Key: pr.Key, Expiration: 10, Value: []byte("test set")})    
     
     if(err!=nil){
         
@@ -101,8 +106,9 @@ func watchPairs(){
                     return
                 }
                 
-                _,err = mcs.Get(it.Key)
+             
                 time.Sleep(100 * time.Millisecond)
+                _,err = mcs.Get(it.Key)
             }
             
             currentTime := time.Now()

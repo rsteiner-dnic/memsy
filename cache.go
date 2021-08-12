@@ -8,6 +8,7 @@ import(
     "context"
     "strconv"
     "encoding/gob"
+    "fmt"
     "bytes"
     memcache "github.com/bradfitz/gomemcache/memcache"
     "github.com/DncDev/memsy/dkv"
@@ -15,6 +16,8 @@ import(
     memcached "github.com/ralfonso-directnic/go-memcached"
     "github.com/paulbellamy/ratecounter"
 )
+
+
 
 type Cache struct{
   Loaded bool
@@ -116,7 +119,7 @@ func (c *Cache) PeerDistribute(){
     
            items = append(items,it)
            
-       case <-time.After(2 * time.Second):
+       case <-time.After(500 * time.Millisecond):
            
            override=true
        //allow flusing the current list 
@@ -174,14 +177,15 @@ func (c *Cache) PeerDistribute(){
                         
                     log.Printf("Sending to peer: %s ct: %d\n",p+":"+pport,len(ite))    
                     
-                    mc := memcache.New(p+":"+pport)
+                    mc := memcache.New(fmt.Sprintf("%s:%s",p,pport))
+                    mc.MaxIdleConns = 10
                     
                     for _,item := range ite {
                         
                         exp := int32(item.Expires.Sub(time.Now()).Seconds())
                         
                     
-                        mc.Set(&memcache.Item{Key: "memsysync_"+item.Key, Value: item.Value,Expiration: exp})  
+                        mc.Set(&memcache.Item{Key: fmt.Sprintf("memsysync_%s",item.Key), Value: item.Value,Expiration: exp})  
                   
                     
                     }
