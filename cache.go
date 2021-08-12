@@ -17,7 +17,7 @@ import(
     "github.com/paulbellamy/ratecounter"
 )
 
-
+var peercon map[string]*memcache.Client
 
 type Cache struct{
   Loaded bool
@@ -73,7 +73,7 @@ func (c *Cache) Peers(p []string){
 
 func (c *Cache) SetWithContext(ctx *context.Context,item *memcached.Item) memcached.MemcachedResponse {
 
-    c.counter.Incr(1)
+    go c.counter.Incr(1)
     
     c.StatsObj["total_items"].(*memcached.CounterStat).Increment(1)
     
@@ -84,7 +84,7 @@ func (c *Cache) SetWithContext(ctx *context.Context,item *memcached.Item) memcac
         item.Key=strings.Replace(item.Key,"memsysync_","",-1)
     }
 
-    c.Index.Set(item.Key,item)
+    go c.Index.Set(item.Key,item)
     
     go c.DurableSave(item)
     
@@ -105,7 +105,66 @@ func (c *Cache) SyncItem(item *memcached.Item){
 
 //syncs to all peers
 
+func (c *Cache) PeerConnect(){
+    
+    pport := strconv.Itoa(port)  
+    
+    for _,p := range c.peers {
+            
+                  
+                    mc := memcache.New(fmt.Sprintf("%s:%s",p,pport))
+                    mc.MaxIdleConns = 100
+                    peercon[p] = mc
+                    
+    }           
+
+    
+    
+}
+
 func (c *Cache) PeerDistribute(){ 
+    
+    
+    //peer connection management
+    
+    peercon = make(map[string]*memcache.Client)
+    
+    go func(){
+    
+    c.PeerConnect()
+    
+    tick := time.NewTicker(5*time.Second)
+        
+    pport := strconv.Itoa(port)  
+        
+    for range tick.C {
+        
+         for p,cli := range peercon {
+            
+            
+                 err := cli.Set(&memcache.Item{Key: "memcache_connection_check", Value: []byte("1"),Expiration: 3600})
+                 //check the connection is up, if it's not create it
+                 if(err!=nil){
+                    log.Printf("Peercon ping failed %s, reconnecting to %s\n",err,p)
+                    mc := memcache.New(fmt.Sprintf("%s:%s",p,pport))
+                    mc.MaxIdleConns = 100
+                    peercon[p] = mc
+                 }   
+                    
+         }   
+         
+         if(len(c.peers)!=len(peercon)){
+             log.Println("Peers mismatch, reconnect all peers")
+             go c.PeerConnect() //this will ensure if a peer is down when started it gets added when it's back up
+             
+         }        
+
+    }
+    
+    }()
+    
+    
+    
     
     var items []*memcached.Item
     
@@ -126,36 +185,19 @@ func (c *Cache) PeerDistribute(){
         
        }
        
-       if(len(items)>0){
-        
-       //log.Println("Items in distribution queue:",len(items))
-        
-       } 
         //batch N items to send
             
         crate := c.counter.Rate()
                 
         rate := 1
-      
-        if(crate>750){
-        
-            rate = 1000
-            
-        }else if(crate>500){
-            
-            rate = 500
-            
-        }else if(crate>100){
+
+        if(crate>100){
             
             rate = 100
             
-        }else if(crate>50){
+        }else if(crate>25){
             
-            rate = 50
-            
-        }else if(crate>10){
-            
-            rate = 10
+            rate = 25
             
         }
         
@@ -167,32 +209,34 @@ func (c *Cache) PeerDistribute(){
         
         if(len(items)==rate || override==true){
             
+            
             go func(ite []*memcached.Item){
-                
-             for _,p := range c.peers {
+            
+             pport := strconv.Itoa(port)  
+                    
+             for p,mc := range peercon {
                 
                 if(len(ite)>0){
                     
-                    pport := strconv.Itoa(port)    
-                        
-                    log.Printf("Sending to peer: %s ct: %d\n",p+":"+pport,len(ite))    
                     
-                    mc := memcache.New(fmt.Sprintf("%s:%s",p,pport))
-                    mc.MaxIdleConns = 10
-                    
+                      
+                    log.Printf("Sending to peer: %s ct: %d\n",p+":"+pport,len(ite))   
+                                       
                     for _,item := range ite {
                         
                         exp := int32(item.Expires.Sub(time.Now()).Seconds())
                         
                     
-                        mc.Set(&memcache.Item{Key: fmt.Sprintf("memsysync_%s",item.Key), Value: item.Value,Expiration: exp})  
+                        mc.Set(&memcache.Item{Key: fmt.Sprintf("memsysync_%s",item.Key), Value: item.Value,Expiration: exp})
+                        time.Sleep(5*time.Millisecond) 
                   
-                    
                     }
+                    
+                    
                 
-                }
+               }
         
-             }  
+             } 
                 
             }(items)
             
