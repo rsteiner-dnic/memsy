@@ -64,6 +64,10 @@ func (c *Cache) Peers(p []string){
     c.peeritems = make(map[string]chan  *memcached.Item)
     
     for _,pp := range c.peers {
+
+    	if(len(pp)<1){
+        	continue
+    	}
         
           c.peeritems[pp] = make(chan *memcached.Item)
         
@@ -217,6 +221,10 @@ func (c *Cache) PeerDistribute(){
              for p,mc := range peercon {
                 
                 if(len(ite)>0){
+                    
+                    if(len(p)<1){
+                        continue
+                    } 
                     
                     
                       

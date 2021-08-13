@@ -31,7 +31,7 @@ var expireinterval string
 
 func main() {
     
-
+    
     
     flag.StringVar(&cacheloc,"cachedir","/var/cache","Location directory for memsy db")
     flag.StringVar(&syncinterval,"syncinterval","30m","How often to sync all records to other nodes")
@@ -123,8 +123,12 @@ func syncPeers(){
             for _,p := range peers{
             	
             	//send a sync request
-         
-                parts := strings.Split(p,":")   
+            
+                parts := strings.Split(p,":")
+                
+                if(len(p)<1){
+                	continue
+            	}
                 
             	log.Printf("Syncing from node %s",parts[0]+":"+comport)
               	
@@ -143,6 +147,10 @@ func syncPeers(){
 //Sync to peers and then sync every X duration
 func startSyncPeers(){
     
+    
+       if(len(peers)<1){
+                	return
+       }
    	 
        log.Println("Syncing to Peers...")
        
@@ -203,7 +211,6 @@ func keySync (data string, conn net.Conn){
       }()
       
       tcpcomm.Resp(conn,"Ack","OK")	
-      
       
     	
     	
