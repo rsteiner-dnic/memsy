@@ -88,6 +88,12 @@ func (c *Cache) SetWithContext(ctx *context.Context,item *memcached.Item) memcac
         item.Key=strings.Replace(item.Key,"memsysync_","",-1)
     }
 
+    if(debug==true){
+
+    go log.Printf("Set Key: %s",item.Key)
+
+    }
+
     go c.Index.Set(item.Key,item)
     
     go c.DurableSave(item)
