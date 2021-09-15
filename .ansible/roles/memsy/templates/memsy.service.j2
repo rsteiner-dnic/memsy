@@ -8,6 +8,7 @@ User=root
 ExecStart=/usr/local/bin/memsy --peers={{ memsy_peers }} --port={{ memsy_port }} --cachedir={{ memsy_cache_dir }}
 Restart=always
 RestartSec=5
+LimitNOFILE=65536
 StartLimitInterval=0
 StartLimitBurst=1
 PIDFile=/var/run/memsy/memsy.pid
