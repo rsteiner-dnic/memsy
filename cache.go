@@ -79,7 +79,7 @@ func (c *Cache) SetWithContext(ctx *context.Context,item *memcached.Item) memcac
 
     go c.counter.Incr(1)
     
-    c.StatsObj["total_items"].(*memcached.CounterStat).Increment(1)
+    go c.StatsObj["total_items"].(*memcached.CounterStat).Increment(1)
     
     dosync := true
     
@@ -334,6 +334,8 @@ func NewCache(cacheloc string) *Cache {
     cache := &Cache{}
     
     cache.Storage,err = dkv.Open(cacheloc+"/memsy.db")
+
+    cmap.SHARD_COUNT =  128
 
     cache.Index = cmap.New()
     

@@ -9,7 +9,7 @@ ExecStart=/usr/local/bin/memsy --peers={{ memsy_peers }} --port={{ memsy_port }}
 Restart=always
 RestartSec=5
 StartLimitInterval=0
-StartLimitBurst=3
+StartLimitBurst=1
 PIDFile=/var/run/memsy/memsy.pid
 
 [Install]
