@@ -41,7 +41,7 @@ func (c *Cache) GetWithContext(ctx *context.Context,key string) memcached.Memcac
     //for some reason the key is passed with a preceding space, it's probably a bug in the lib
     key = strings.TrimSpace(key)
     
-    if tmp, ok := c.Index.Get(key); ok {
+     if tmp, ok := c.Index.Get(key); ok {
 		item := tmp.(*memcached.Item)
 		
 		if item.IsExpired() {
@@ -50,7 +50,9 @@ func (c *Cache) GetWithContext(ctx *context.Context,key string) memcached.Memcac
 		} else {
 			return &memcached.ItemResponse{item}
 		}	
-	}
+     }else if(debug==true){ 
+       go log.Printf("Key Missing: %s",key)
+     }
 	
 	
     
@@ -341,7 +343,7 @@ func NewCache(cacheloc string) *Cache {
     
     cache.Storage,err = dkv.Open(cacheloc+"/memsy.db")
 
-    cmap.SHARD_COUNT =  128
+    cmap.SHARD_COUNT =  256
 
     cache.Index = cmap.New()
     
